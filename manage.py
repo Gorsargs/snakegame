@@ -1,72 +1,42 @@
-import pygame
+import pygame, random
 
 GREEN = (0,200,0)
+RED =  (200,0,0)
 WINDOW_HEIGHT = 800
 WINDOW_WIDTH = 800
 
 BLOCK_SIZE = WINDOW_WIDTH // 20
+MAP_SIZE = 20
 
 snake = [(3,2),(3,3),(3,4),(3,5),(2,5)]
 
-def main():
-    global SCREEN
-    pygame.init()
-    SCREEN = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-    MOVE_SNAKE = pygame.USEREVENT
-    pygame.time.set_timer(MOVE_SNAKE, 300) # 500ms = 0.5s
-    directions = {
-        "x" : 1,
-        "y" : 0
-    }
-    keyqueue = []
-    while True:
-        SCREEN.fill((0, 0, 0),(0,0,WINDOW_WIDTH,WINDOW_HEIGHT))
-        gameMap = [[0 for j in range(20)] for i in range(20)]
-        updateSnakePositionInMap(gameMap)
-        drawSnakeAndMap(gameMap)
-        
-        if(checkIfDead()):
-            pygame.quit()
-        
-        for event in pygame.event.get():
-            if event.type == pygame.KEYUP:
-                if(len(keyqueue) > 3):
-                    keyqueue.pop()
-                if(event.key == pygame.K_LEFT):
-                    def fnc():
-                        if(directions["x"] == 0):
-                            directions["x"] = -1
-                            directions["y"] = 0
-                    keyqueue.insert(0,fnc)
-                if(event.key == pygame.K_RIGHT):
-                    def fnc():
-                        if directions["x"] == 0:
-                            directions["x"] = 1
-                            directions["y"]  = 0
-                    keyqueue.insert(0,fnc)
-                if(event.key == pygame.K_UP):
-                    def fnc():
-                        if(directions["y"] == 0):
-                            directions["y"] = -1
-                            directions["x"] = 0
-                    keyqueue.insert(0,fnc)
-                if(event.key == pygame.K_DOWN):
-                    def fnc():
-                        if directions["y"] == 0:
-                            directions["y"] = 1
-                            directions["x"] = 0
-                    keyqueue.insert(0,fnc)
-            if event.type == MOVE_SNAKE:
-                if(len(keyqueue)):
-                    keyqueue.pop()()
-                moveSnake(gameMap,directions)
-            if event.type == pygame.QUIT:
-                pygame.quit()
-        pygame.display.update()
-        
+food = {
+    "x" : 0,
+    "y" : 0        
+}
+
+
+global SCREEN
+pygame.init()
+SCREEN = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+MOVE_SNAKE = pygame.USEREVENT
+pygame.time.set_timer(MOVE_SNAKE, 100) # 500ms = 0.5s
+directions = {
+    "x" : 1,
+    "y" : 0
+}
+keyqueue = []
+
+game = {
+    "shouldSpawnFood" : True
+}
+
 def updateSnakePositionInMap(gameMap):
     for i in snake:
         gameMap[i[0]][i[1]] = 1
+
+def updateFoodPositionInMap(gameMap):
+    gameMap[food["y"]][food["x"]] = 2
 
 def drawSnakeAndMap(gameMap):
     blockSize = BLOCK_SIZE
@@ -75,6 +45,8 @@ def drawSnakeAndMap(gameMap):
             rect = pygame.Rect(x*blockSize, y*blockSize, blockSize,blockSize)
             if(gameMap[y][x] == 1):
                 pygame.draw.rect(SCREEN, GREEN, rect)
+            elif(gameMap[y][x] == 2):
+                pygame.draw.rect(SCREEN, RED, rect , 10)
             else:
                 pygame.draw.rect(SCREEN, GREEN, rect, 1)
 
@@ -88,7 +60,23 @@ def checkIfDead():
         if(snake[i] == snakeHead):
             return True
     return False
+
+def feedSnake():
+    foodPos = (food["y"],food["x"])
+    if(snake[-1] == foodPos):
+        snake.insert(0, snake[0])
+        game["shouldSpawnFood"] = True
+
+def spawnFood(gameMap):
+    while(True):
+        x = random.randint(0,len(gameMap)-1)
+        y = random.randint(0,len(gameMap)-1)
         
+        if(gameMap[y][x] == 0):
+            food["x"] = x
+            food["y"] = y
+            return
+    
 def moveSnake(gameMap,directions):
     moveSnakeBodyToHead()
     nextXpos = snake[-1][1] + directions["x"]
@@ -104,4 +92,52 @@ def moveSnake(gameMap,directions):
     else:
         snake[-1] = (snake[-1][0] + directions["y"], snake[-1][1] + directions["x"])
 
-main()
+while True:
+    SCREEN.fill((0, 0, 0),(0,0,WINDOW_WIDTH,WINDOW_HEIGHT))
+    gameMap = [[0 for j in range(MAP_SIZE)] for i in range(MAP_SIZE)]
+    updateSnakePositionInMap(gameMap)
+    updateFoodPositionInMap(gameMap)
+    drawSnakeAndMap(gameMap)
+    feedSnake()
+    if(checkIfDead()):
+        pygame.quit()
+    
+    if(game["shouldSpawnFood"]):
+        spawnFood(gameMap)
+        game["shouldSpawnFood"] = False
+    for event in pygame.event.get():
+        if event.type == pygame.KEYUP:
+            if(len(keyqueue) > 3):
+                keyqueue.pop()
+            if(event.key == pygame.K_LEFT):
+                def fnc():
+                    if(directions["x"] == 0):
+                        directions["x"] = -1
+                        directions["y"] = 0
+                keyqueue.insert(0,fnc)
+            if(event.key == pygame.K_RIGHT):
+                def fnc():
+                    if directions["x"] == 0:
+                        directions["x"] = 1
+                        directions["y"]  = 0
+                keyqueue.insert(0,fnc)
+            if(event.key == pygame.K_UP):
+                def fnc():
+                    if(directions["y"] == 0):
+                        directions["y"] = -1
+                        directions["x"] = 0
+                keyqueue.insert(0,fnc)
+            if(event.key == pygame.K_DOWN):
+                def fnc():
+                    if directions["y"] == 0:
+                        directions["y"] = 1
+                        directions["x"] = 0
+                keyqueue.insert(0,fnc)
+        if event.type == MOVE_SNAKE:
+            if(len(keyqueue)):
+                keyqueue.pop()()
+            moveSnake(gameMap,directions)
+        if event.type == pygame.QUIT:
+            pygame.quit()
+    pygame.display.update()
+    
